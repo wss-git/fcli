@@ -27,6 +27,10 @@ type createFuncInputType struct {
 	initializationTimeout  int32
 	environmentVariables   []string
 	environmentConfigFiles []string
+	cAPort								 int32
+	image   							 string
+	command								 string
+	args									 string
 }
 
 // Use a unique name to avoid global variable confliction.
@@ -50,6 +54,10 @@ func init() {
 	createFuncCmd.Flags().StringVar(
 		&createFuncInput.codeFile, "code-file", "",
 		"zipped code file. If both code-file and code-dir are provided, code-file will be used.")
+	createFuncCmd.Flags().Int32VarP(&createFuncInput.cAPort, "ca-port", "", 9000, "listening port")
+	createFuncCmd.Flags().StringVarP(&createFuncInput.image, "image", "", "", "container image")
+	createFuncCmd.Flags().StringVarP(&createFuncInput.command, "command", "", "", "container command")
+	createFuncCmd.Flags().StringVarP(&createFuncInput.args, "args", "", "", "container args")
 	createFuncCmd.Flags().StringVarP(&createFuncInput.runtime, "runtime", "t", "", "function runtime")
 	createFuncCmd.Flags().StringVarP(
 		&createFuncInput.handler, "handler", "h", "", "handler is the entrypoint for the function execution")
@@ -98,20 +106,28 @@ var createFuncCmd = &cobra.Command{
 			input.WithEnvironmentVariables(envMap)
 		}
 
-		if createFuncInput.codeFile != "" {
-			var data []byte
-			data, err := ioutil.ReadFile(createFuncInput.codeFile)
-			if err != nil {
-				fmt.Printf("Error: %s\n", err)
-				return
-			}
-			input.WithCode(fc.NewCode().WithZipFile(data))
-		} else if createFuncInput.codeDir != "" {
-			input.WithCode(fc.NewCode().WithDir(createFuncInput.codeDir))
+		if createFuncInput.runtime == "custom-container" {
+			input.WithCAPort(createFuncInput.cAPort).
+				WithCustomContainerConfig(fc.NewCustomContainerConfig().
+					WithImage(createFuncInput.image).
+					WithCommand(createFuncInput.command).
+					WithArgs(createFuncInput.args))
 		} else {
-			input.WithCode(fc.NewCode().
-				WithOSSBucketName(createFuncInput.codeOSSBucket).
-				WithOSSObjectName(createFuncInput.codeOSSObject))
+			if createFuncInput.codeFile != "" {
+				var data []byte
+				data, err := ioutil.ReadFile(createFuncInput.codeFile)
+				if err != nil {
+					fmt.Printf("Error: %s\n", err)
+					return
+				}
+				input.WithCode(fc.NewCode().WithZipFile(data))
+			} else if createFuncInput.codeDir != "" {
+				input.WithCode(fc.NewCode().WithDir(createFuncInput.codeDir))
+			} else {
+				input.WithCode(fc.NewCode().
+					WithOSSBucketName(createFuncInput.codeOSSBucket).
+					WithOSSObjectName(createFuncInput.codeOSSObject))
+			}
 		}
 
 		client, err := util.NewFClient(gConfig)

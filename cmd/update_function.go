@@ -29,6 +29,10 @@ type updateFuncInputType struct {
 	etag                   *string
 	environmentVariables   *[]string
 	environmentConfigFiles *[]string
+	cAPort								 *int32
+	image   							 *string
+	command								 *string
+	args									 *string
 }
 
 var updateFuncInput updateFuncInputType
@@ -54,6 +58,10 @@ func init() {
 	updateFuncInput.codeFile = updateFuncCmd.Flags().String(
 		"code-file", "", "zipped code file. If both code-file and code-dir are provided, "+
 			"code-file will be used.")
+	updateFuncInput.cAPort = updateFuncCmd.Flags().Int32("ca-port", 9000, "listening port")
+	updateFuncInput.image = updateFuncCmd.Flags().StringP("image", "", "", "container image")
+	updateFuncInput.command = updateFuncCmd.Flags().StringP("command", "", "", "container command")
+	updateFuncInput.args = updateFuncCmd.Flags().StringP("args", "", "", "container porargst")
 	updateFuncInput.etag = updateFuncCmd.Flags().String(
 		"etag", "", "provide etag to do the conditional update. "+
 			"If the specified etag does not match the function's, the update will fail.")
@@ -115,6 +123,15 @@ var updateFuncCmd = &cobra.Command{
 		}
 		if cmd.Flags().Changed("runtime") {
 			input.WithRuntime(*updateFuncInput.runtime)
+		}
+		if (cmd.Flags().Changed("image") || cmd.Flags().Changed("command") || cmd.Flags().Changed("args")) {
+			input.WithCustomContainerConfig(fc.NewCustomContainerConfig().
+				WithImage(*updateFuncInput.image).
+				WithCommand(*updateFuncInput.command).
+				WithArgs(*updateFuncInput.args))
+		}
+		if cmd.Flags().Changed("ca-port") {
+			input.WithCAPort(*updateFuncInput.cAPort)
 		}
 		if cmd.Flags().Changed("code-file") {
 			data, err := ioutil.ReadFile(*updateFuncInput.codeFile)

@@ -686,6 +686,8 @@ var shellCmd = &cobra.Command{
 				storeName := flags.StringP("store", "s", "", "the log store")
 				shardCnt := flags.Int("shard", 1, "the shard count of the log store")
 				ttl := flags.Int("ttl", 30, "the ttl of the log store, in days")
+				autoSplit := flags.Bool("split", false, "autoSplit is auto split")
+				maxSplitShard := flags.Int("max-split-shard", 64, "maxSplitShard is the max number of shard")
 				help := flags.Bool("help", false, "")
 				err := flags.Parse(c.Args)
 				if err != nil {
@@ -738,7 +740,7 @@ var shellCmd = &cobra.Command{
 							fmt.Printf("Please input y/n:\n")
 						}
 					}
-					proj.CreateLogStore(*storeName, *ttl, *shardCnt)
+					proj.CreateLogStore(*storeName, *ttl, *shardCnt, *autoSplit, *maxSplitShard)
 					store, err = proj.GetLogStore(*storeName)
 				}
 				if store == nil {
